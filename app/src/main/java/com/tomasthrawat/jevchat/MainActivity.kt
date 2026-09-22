@@ -1,20 +1,26 @@
 package com.tomasthrawat.jevchat
 
+import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
 
-class MainActivity : android.app.Activity() {
+class MainActivity : Activity() {
+    private data class ChatMessage(val role: String, val content: String)
+
     private val executor = Executors.newSingleThreadExecutor()
+    private val history = mutableListOf<ChatMessage>()
     private lateinit var messages: LinearLayout
     private lateinit var input: EditText
     private lateinit var endpoint: EditText
     private lateinit var status: TextView
+    private lateinit var send: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +54,8 @@ class MainActivity : android.app.Activity() {
             setText("http://10.0.2.2:8766/api/chat")
             setTextColor(Color.WHITE)
             setHintTextColor(Color.GRAY)
-            singleLine = true
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
         root.addView(endpoint)
 
@@ -66,13 +73,14 @@ class MainActivity : android.app.Activity() {
 
         input = EditText(this).apply {
             hint = "اكتب لـ Jev..."
-            textColor = Color.WHITE
-            hintTextColor = Color.GRAY
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
             maxLines = 4
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
 
-        val send = Button(this).apply {
+        send = Button(this).apply {
             text = "إرسال"
             setOnClickListener { sendMessage() }
         }
@@ -80,7 +88,7 @@ class MainActivity : android.app.Activity() {
         root.addView(row)
 
         setContentView(root)
-        addMessage("Jev", "اكتب هدفك هنا.")
+        addMessage("Jev", "اكتب هدفك أو سؤالك هنا.")
     }
 
     private fun addMessage(who: String, text: String) {
@@ -101,51 +109,61 @@ class MainActivity : android.app.Activity() {
 
     private fun sendMessage() {
         val text = input.text.toString().trim()
-        if (text.isEmpty()) return
+        val target = endpoint.text.toString().trim()
+        if (text.isEmpty() || target.isEmpty() || send.isEnabled.not()) return
 
+        history.add(ChatMessage("user", text))
         addMessage("أنت", text)
         input.setText("")
+        send.isEnabled = false
         status.text = "Jev يفكر..."
 
         executor.execute {
+            var connection: HttpURLConnection? = null
             try {
-                val connection = (URL(endpoint.text.toString().trim()).openConnection() as HttpURLConnection).apply {
+                connection = (URL(target).openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 10000
-                    readTimeout = 60000
+                    readTimeout = 90000
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
                 }
 
-                val body = JSONObject().put("message", text).toString()
-                connection.outputStream.use {
-                    it.write(body.toByteArray(Charsets.UTF_8))
+                val jsonMessages = JSONArray()
+                history.takeLast(24).forEach { message ->
+                    jsonMessages.put(JSONObject().put("role", message.role).put("content", message.content))
                 }
+                val body = JSONObject().put("messages", jsonMessages).toString()
+                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
 
                 val code = connection.responseCode
                 val stream = if (code in 200..299) connection.inputStream else connection.errorStream
                 val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                connection.disconnect()
+                val json = runCatching { JSONObject(response) }.getOrNull()
+                val reply = json?.optString("reply")?.takeIf { it.isNotBlank() }
+                val error = json?.optString("error")?.takeIf { it.isNotBlank() }
+                val display = if (code in 200..299 && reply != null) reply
+                else error ?: response.ifBlank { "HTTP $code" }
 
-                val reply = try {
-                    val json = JSONObject(response)
-                    json.optString("reply").ifBlank {
-                        json.optString("message").ifBlank { response }
-                    }
-                } catch (_: Exception) {
-                    response.ifBlank { "HTTP $code" }
+                if (code in 200..299 && reply != null) {
+                    history.add(ChatMessage("assistant", reply))
                 }
 
                 runOnUiThread {
-                    addMessage("Jev", reply)
+                    addMessage("Jev", display)
                     status.text = if (code in 200..299) "متصل بـ Jev" else "HTTP $code"
+                    send.isEnabled = true
+                    input.requestFocus()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
                     addMessage("Jev", "فشل الاتصال: " + (e.message ?: "خطأ غير معروف"))
                     status.text = "غير متصل"
+                    send.isEnabled = true
                 }
+            } finally {
+                connection?.disconnect()
             }
         }
     }
