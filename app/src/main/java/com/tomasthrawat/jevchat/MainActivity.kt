@@ -584,17 +584,12 @@ class MainActivity : Activity() {
     private fun conversation(): JSONArray {
         val result = JSONArray()
         result.put(JSONObject().put("role", "system").put("content", systemPrompt))
-        var remainingChars = 16000
         for (message in history.asReversed()) {
-            if (remainingChars <= 0) break
-            val content = message.content
-            val clipped = content.take(remainingChars)
             result.put(
                 JSONObject()
                     .put("role", message.role)
-                    .put("content", clipped)
+                    .put("content", message.content)
             )
-            remainingChars -= clipped.length
         }
         val ordered = result
         val reversed = JSONArray()
@@ -610,7 +605,7 @@ class MainActivity : Activity() {
             .put("model", "auto")
             .put("messages", messagesJson)
             .put("temperature", 0.35)
-            .put("max_tokens", 900)
+            .put("max_tokens", 1200)
         if (toolsJson.length() > 0) {
             body.put("tools", toolsJson)
             body.put("tool_choice", "auto")
@@ -620,8 +615,8 @@ class MainActivity : Activity() {
         try {
             c = URL("https://vireonix.ai/v1/chat/completions").openConnection() as HttpURLConnection
             c.requestMethod = "POST"
-            c.connectTimeout = 10000
-            c.readTimeout = 60000
+            c.connectTimeout = 15000
+            c.readTimeout = 90000
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             c.setRequestProperty("Accept", "application/json")
