@@ -46,8 +46,6 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.rgb(9, 11, 16)
-        window.navigationBarColor = Color.rgb(7, 9, 13)
         buildUi()
         reconnectSavedMcp()
     }
