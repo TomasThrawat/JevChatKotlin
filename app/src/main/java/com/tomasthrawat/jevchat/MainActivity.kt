@@ -557,8 +557,7 @@ class MainActivity : Activity() {
             .replace(Regex("[ \t]+"), " ")
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
-
-        return head + "\n\n" + readable.take(maxChars.coerceIn(1000, 12000))
+        return head + "\n\n" + readable
     }
 
     private fun conversation(): JSONArray {
