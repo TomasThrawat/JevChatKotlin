@@ -1,54 +1,23 @@
 # JevChatKotlin
 
-Native Kotlin Android chat client for a Jev Ultrafast backend. It is a real Android app, not HTML and not a WebView.
+Native Kotlin Android chat app that works directly from the phone. No PC, local Ollama server, HTML, or WebView is required.
 
-## Architecture
+## Phone-only mode
 
-The Android app sends a conversation as JSON to the Jev backend:
+The app sends the conversation directly to the Gemini Developer API over HTTPS. No backend server is needed on your side.
 
-```text
-POST /api/chat
-Content-Type: application/json
+Default model: `gemini-3.8-flash`
 
-{"messages":[{"role":"user","content":"Hello Jev"}]}
-```
+The API key and chat history are held in app memory only and are not written to files.
 
-The backend returns:
+## Setup
 
-```json
-{"reply":"Hello...","model":"gpt-oss:20b","usage":{},"latency_ms":1234}
-```
+Open Google AI Studio from the button in the app, create an API key with an eligible account/project, paste the key into the app, and start chatting.
 
-Conversation history is kept in memory by the app and is not written to files.
+Google documents a Free Tier for selected Gemini API models with free input and output tokens, subject to the active rate limits for the project.
 
-## Run Jev with free local Ollama
-
-In `browser-use/jev-ultrafast` or its fork, use an OpenAI-compatible Ollama endpoint:
-
-```env
-LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
-OLLAMA_MODEL=gpt-oss:20b
-JEV_BIND_HOST=127.0.0.1
-```
-
-Start Jev with:
-
-```bash
-uv run jev
-```
-
-For the Android phone to reach the backend over the same LAN, bind the server to the LAN interface and set `JEV_ALLOW_NETWORK=1`:
-
-```env
-JEV_BIND_HOST=0.0.0.0
-JEV_ALLOW_NETWORK=1
-```
-
-Then set the Android endpoint to `http://<computer-lan-ip>:8766/api/chat`.
-
-Do not expose the development server directly to the public internet.
+Do not put a personal API key into GitHub, source files, screenshots, or public posts.
 
 ## Build
 
-GitHub Actions builds a debug APK and uploads the `JevChat-debug` artifact.
+GitHub Actions builds the debug APK and uploads the `JevChat-debug` artifact.
