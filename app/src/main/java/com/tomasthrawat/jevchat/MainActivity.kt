@@ -201,7 +201,7 @@ class MainActivity : Activity() {
             setTypeface(null, Typeface.BOLD)
         }, LinearLayout.LayoutParams(0, -2, 1f))
         head.addView(TextView(this).apply {
-            text = "نسخ"
+            this.text = "نسخ"
             textSize = 11.5f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(175, 185, 207))
@@ -219,7 +219,7 @@ class MainActivity : Activity() {
             this.text = text
             textSize = 16f
             setTextColor(Color.rgb(241, 244, 249))
-            textIsSelectable = true
+            setTextIsSelectable(true)
             setLineSpacing(0f, 1.08f)
             setPadding(0, dp(7), 0, dp(2))
         })
@@ -256,7 +256,7 @@ class MainActivity : Activity() {
         })
         val url = EditText(this).apply {
             hint = "MCP Session URL (HTTPS)"
-            text = prefs.getString("mcp_url", "")
+            setText(prefs.getString("mcp_url", "").orEmpty())
             setTextColor(Color.WHITE)
             setHintTextColor(Color.rgb(96, 105, 122))
             background = bg(Color.rgb(14, 18, 25), Color.rgb(48, 55, 70), 14)
@@ -267,7 +267,7 @@ class MainActivity : Activity() {
 
         val headers = EditText(this).apply {
             hint = "Authorization: Bearer ...\nx-api-key: ..."
-            text = prefs.getString("mcp_headers", "")
+            setText(prefs.getString("mcp_headers", "").orEmpty())
             setTextColor(Color.WHITE)
             setHintTextColor(Color.rgb(96, 105, 122))
             gravity = Gravity.TOP or Gravity.START
@@ -277,7 +277,7 @@ class MainActivity : Activity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             setPadding(dp(12), dp(9), dp(12), dp(9))
         }
-        panel.addView(headers, LinearLayout.LayoutParams(-1, dp(128)).apply { marginTop = dp(9) })
+        panel.addView(headers, LinearLayout.LayoutParams(-1, dp(128)).apply { topMargin = dp(9) })
 
         val dialog = android.app.AlertDialog.Builder(this)
             .setTitle("MCP / Composio")
