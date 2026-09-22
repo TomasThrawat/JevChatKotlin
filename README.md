@@ -1,23 +1,24 @@
 # JevChatKotlin
 
-Native Kotlin Android chat app that works directly from the phone. No PC, local Ollama server, HTML, or WebView is required.
+Native Kotlin Android chat app that works directly from the phone. No PC, local Ollama server, HTML, WebView, Gemini API key, or backend is required.
 
-## Phone-only mode
+## Phone-only free mode
 
-The app sends the conversation directly to the Gemini Developer API over HTTPS. No backend server is needed on your side.
+The app sends the conversation directly to the Vireonix OpenAI-compatible chat endpoint over HTTPS.
 
-Default model: \`gemini-3.8-flash\`
+- Public model ID: `auto`
+- No API key
+- No account
+- No payment method
+- No personal credential is stored by the app
+- Chat history stays in app memory only
 
-The API key and chat history are held in app memory only and are not written to files.
-
-## Setup
-
-Open Google AI Studio from the button in the app, create an API key with an eligible account/project, paste the key into the app, and start chatting.
-
-Google documents a Free Tier for selected Gemini API models with free input and output tokens, subject to the active rate limits for the project.
-
-Do not put a personal API key into GitHub, source files, screenshots, or public posts.
+Vireonix documents the public API as free for everyone with per-IP fair-use limits. The current documented `auto` budget is 20,000,000 input tokens/hour and 200,000 output tokens/hour per IP. It is not literally unlimited.
 
 ## Build
 
-GitHub Actions builds the debug APK and uploads the \`JevChat-debug\` artifact.
+GitHub Actions builds the debug APK and uploads the `JevChat-debug` artifact.
+
+## Network behavior
+
+The app requires only Android `INTERNET` permission and uses HTTPS for the Vireonix endpoint.
