@@ -11,7 +11,7 @@ Native Kotlin Android chat client for Jev.
 - MCP tools are discovered with tools/list.
 - Discovered MCP tools are exposed to Vireonix as OpenAI-compatible function tools.
 - Vireonix tool calls are executed with MCP tools/call and results are returned to the model for the final response.
-- Chat history is memory-only for the current process.
+- Chat history is persisted locally in SharedPreferences.
 - MCP URL and headers are saved only in local SharedPreferences after a successful connection.
 - Every message has a native Copy action.
 - No WebView or HTML UI is used.
@@ -28,7 +28,7 @@ The exact tools available depend on the Composio session configuration. A sessio
 
 User -> Vireonix -> OpenAI-style tool call -> native MCP tools/call -> tool result -> Vireonix final answer
 
-The app allows up to four model/tool rounds for a single user message and limits each returned tool result to 12,000 characters.
+The app does not impose client-side limits on model/tool rounds, tool result size, MCP pagination, local tool response size, model output tokens, or network timeouts.
 
 ## Build
 

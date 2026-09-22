@@ -163,7 +163,6 @@ class MainActivity : Activity() {
             background = null
             gravity = Gravity.TOP or Gravity.START
             minLines = 1
-            maxLines = 6
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setPadding(dp(10), dp(7), dp(8), dp(7))
@@ -321,7 +320,6 @@ class MainActivity : Activity() {
             setHintTextColor(Color.rgb(96, 105, 122))
             gravity = Gravity.TOP or Gravity.START
             minLines = 4
-            maxLines = 8
             background = bg(Color.rgb(14, 18, 25), Color.rgb(48, 55, 70), 14)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             setPadding(dp(12), dp(9), dp(12), dp(9))
@@ -453,11 +451,6 @@ class MainActivity : Activity() {
                                         JSONObject()
                                             .put("type", "string")
                                             .put("description", "Public HTTPS URL to open.")
-                                    ).put(
-                                        "max_chars",
-                                        JSONObject()
-                                            .put("type", "integer")
-                                            .put("description", "Maximum returned characters, between 1000 and 12000.")
                                     )
                                 )
                                 .put("required", JSONArray().put("url"))
@@ -487,11 +480,6 @@ class MainActivity : Activity() {
                                         JSONObject()
                                             .put("type", "string")
                                             .put("description", "Public HTTPS URL.")
-                                    ).put(
-                                        "max_chars",
-                                        JSONObject()
-                                            .put("type", "integer")
-                                            .put("description", "Maximum returned characters, between 1000 and 12000.")
                                     )
                                 )
                                 .put("required", JSONArray().put("url"))
@@ -499,7 +487,7 @@ class MainActivity : Activity() {
                 )
         )
 
-        mcpTools.sortedBy { it.name }.take(64).forEach { tool ->
+        mcpTools.sortedBy { it.name }.forEach { tool ->
             result.put(
                 JSONObject()
                     .put("type", "function")
@@ -515,7 +503,7 @@ class MainActivity : Activity() {
         return result
     }
 
-    private fun localNetworkGet(urlText: String, maxChars: Int): String {
+    private fun localNetworkGet(urlText: String): String {
         val trimmed = urlText.trim()
         require(trimmed.startsWith("https://")) { "Only public HTTPS URLs are allowed." }
         val url = URL(trimmed)
@@ -546,19 +534,18 @@ class MainActivity : Activity() {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            val limited = raw.take(maxChars.coerceIn(1000, 12000))
             return buildString {
                 append("HTTP status: ").append(code).append("\n")
                 append("Content-Type: ").append(connection.contentType ?: "unknown").append("\n\n")
-                append(limited)
+                append(raw)
             }
         } finally {
             connection.disconnect()
         }
     }
 
-    private fun localBrowserOpen(urlText: String, maxChars: Int): String {
-        val raw = localNetworkGet(urlText, maxChars.coerceIn(2000, 12000))
+    private fun localBrowserOpen(urlText: String): String {
+        val raw = localNetworkGet(urlText)
         val bodyStart = raw.indexOf("\n\n")
         if (bodyStart < 0) return raw
 
@@ -597,8 +584,7 @@ class MainActivity : Activity() {
         val body = JSONObject()
             .put("model", "auto")
             .put("messages", messagesJson)
-            .put("temperature", 0.35)
-            .put("max_tokens", 1200)
+            .put("temperature", 0.20)
         if (toolsJson.length() > 0) {
             body.put("tools", toolsJson)
             body.put("tool_choice", "auto")
@@ -608,8 +594,8 @@ class MainActivity : Activity() {
         try {
             c = URL("https://vireonix.ai/v1/chat/completions").openConnection() as HttpURLConnection
             c.requestMethod = "POST"
-            c.connectTimeout = 15000
-            c.readTimeout = 90000
+            c.connectTimeout = 0
+            c.readTimeout = 0
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             c.setRequestProperty("Accept", "application/json")
@@ -682,15 +668,13 @@ class MainActivity : Activity() {
                 val output = when (name) {
                     "browser_open" -> runCatching {
                         localBrowserOpen(
-                            args.optString("url"),
-                            args.optInt("max_chars", 8000)
+                            args.optString("url")
                         )
                     }.getOrElse { "browser_open error: " + (it.message ?: "unknown error") }
 
                     "network_get" -> runCatching {
                         localNetworkGet(
-                            args.optString("url"),
-                            args.optInt("max_chars", 8000)
+                            args.optString("url")
                         )
                     }.getOrElse { "network_get error: " + (it.message ?: "unknown error") }
 
@@ -706,7 +690,7 @@ class MainActivity : Activity() {
                     JSONObject()
                         .put("role", "tool")
                         .put("tool_call_id", callId)
-                        .put("content", output.take(12000))
+                        .put("content", output)
                 )
             }
         }

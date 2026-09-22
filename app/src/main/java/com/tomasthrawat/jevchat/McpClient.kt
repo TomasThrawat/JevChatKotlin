@@ -55,7 +55,6 @@ class McpClient(
         check(connected) { "MCP is not connected." }
         val found = mutableListOf<McpTool>()
         var cursor: String? = null
-        var pages = 0
 
         do {
             val params = JSONObject()
@@ -80,8 +79,7 @@ class McpClient(
                 found.add(McpTool(name, item.optString("description").trim(), schema))
             }
             cursor = result.optString("nextCursor").trim().ifBlank { null }
-            pages++
-        } while (cursor != null && pages < 5)
+        } while (cursor != null)
 
         return found.distinctBy { it.name }
     }
