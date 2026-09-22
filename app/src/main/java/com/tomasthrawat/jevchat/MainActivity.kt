@@ -47,6 +47,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
+        restoreHistory()
         reconnectSavedMcp()
     }
 
@@ -100,6 +101,7 @@ class MainActivity : Activity() {
         header.addView(action("MCP") { showMcpSettings() }, LinearLayout.LayoutParams(dp(62), dp(42)))
         header.addView(action("مسح") {
             history.clear()
+            saveHistory()
             messages.removeAllViews()
             addWelcome()
         }, LinearLayout.LayoutParams(dp(62), dp(42)).apply { marginStart = dp(8) })
@@ -171,11 +173,58 @@ class MainActivity : Activity() {
         composer.addView(send, LinearLayout.LayoutParams(dp(82), dp(48)).apply { marginStart = dp(6) })
         root.addView(composer, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
         setContentView(root)
-        addWelcome()
     }
 
     private fun addWelcome() {
         addMessage("Jev", "جاهز. أضف Composio MCP من زر MCP لتفعيل البحث على الويب والأدوات التي تعرضها الجلسة.")
+    }
+
+    private fun saveHistory() {
+        val json = JSONArray()
+        history.forEach {
+            json.put(
+                JSONObject()
+                    .put("role", it.role)
+                    .put("content", it.content)
+            )
+        }
+        prefs.edit().putString("chat_history", json.toString()).apply()
+    }
+
+    private fun restoreHistory() {
+        val raw = prefs.getString("chat_history", "").orEmpty()
+        if (raw.isBlank()) {
+            addWelcome()
+            return
+        }
+
+        val restored = runCatching {
+            val json = JSONArray(raw)
+            buildList {
+                for (i in 0 until json.length()) {
+                    val item = json.optJSONObject(i) ?: continue
+                    val role = item.optString("role").trim()
+                    val content = item.optString("content")
+                    if ((role == "user" || role == "assistant") && content.isNotBlank()) {
+                        add(ChatMessage(role, content))
+                    }
+                }
+            }
+        }.getOrElse {
+            emptyList()
+        }
+
+        history.clear()
+        history.addAll(restored)
+        messages.removeAllViews()
+
+        if (history.isEmpty()) {
+            addWelcome()
+        } else {
+            history.forEach {
+                addMessage(if (it.role == "user") "أنت" else "Jev", it.content)
+            }
+        }
     }
 
     private fun addMessage(who: String, text: String) {
@@ -471,26 +520,14 @@ class MainActivity : Activity() {
     private fun completeWithTools(): String {
         val msgs = conversation()
         val toolsJson = toolDefinitions()
-        var toolRounds = 0
 
         while (true) {
-            val allowTools = toolRounds < 4
-            val message = assistantMessage(
-                requestVireonix(
-                    msgs,
-                    if (allowTools) toolsJson else JSONArray()
-                )
-            )
+            val message = assistantMessage(requestVireonix(msgs, toolsJson))
             val calls = message.optJSONArray("tool_calls")
 
             if (calls == null || calls.length() == 0) {
                 return responseText(message).takeIf { it.isNotBlank() }
                     ?: throw IllegalStateException("لم يرجع النموذج رسالة نصية.")
-            }
-
-            if (!allowTools) {
-                return responseText(message).takeIf { it.isNotBlank() }
-                    ?: throw IllegalStateException("النموذج طلب أداة بعد الوصول للحد المسموح.")
             }
 
             msgs.put(JSONObject(message.toString()))
@@ -516,7 +553,6 @@ class MainActivity : Activity() {
                         .put("content", output.take(12000))
                 )
             }
-            toolRounds++
         }
     }
 
@@ -524,6 +560,7 @@ class MainActivity : Activity() {
         val text = input.text.toString().trim()
         if (text.isEmpty() || !send.isEnabled) return
         history.add(ChatMessage("user", text))
+        saveHistory()
         addMessage("أنت", text)
         input.setText("")
         send.isEnabled = false
@@ -532,6 +569,7 @@ class MainActivity : Activity() {
             try {
                 val reply = completeWithTools()
                 history.add(ChatMessage("assistant", reply))
+                saveHistory()
                 runOnUiThread {
                     addMessage("Jev", reply)
                     status.text = if (mcpTools.isEmpty()) "متصل بـ Vireonix" else "Vireonix + MCP"
@@ -539,7 +577,10 @@ class MainActivity : Activity() {
                     input.requestFocus()
                 }
             } catch (e: Exception) {
-                if (history.lastOrNull()?.role == "user") history.removeAt(history.lastIndex)
+                if (history.lastOrNull()?.role == "user") {
+                    history.removeAt(history.lastIndex)
+                    saveHistory()
+                }
                 runOnUiThread {
                     addMessage("Jev", e.message ?: "حدث خطأ غير معروف.")
                     status.text = "تعذر إكمال الطلب"
