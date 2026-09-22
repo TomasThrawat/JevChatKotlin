@@ -548,11 +548,8 @@ class MainActivity : Activity() {
             val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             val limited = raw.take(maxChars.coerceIn(1000, 12000))
             return buildString {
-                append("HTTP status: ").append(code).append("
-")
-                append("Content-Type: ").append(connection.contentType ?: "unknown").append("
-
-")
+                append("HTTP status: ").append(code).append("\n")
+                append("Content-Type: ").append(connection.contentType ?: "unknown").append("\n\n")
                 append(limited)
             }
         } finally {
@@ -562,9 +559,7 @@ class MainActivity : Activity() {
 
     private fun localBrowserOpen(urlText: String, maxChars: Int): String {
         val raw = localNetworkGet(urlText, maxChars.coerceIn(2000, 12000))
-        val bodyStart = raw.indexOf("
-
-")
+        val bodyStart = raw.indexOf("\n\n")
         if (bodyStart < 0) return raw
 
         val head = raw.substring(0, bodyStart)
@@ -576,9 +571,7 @@ class MainActivity : Activity() {
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
 
-        return head + "
-
-" + readable.take(maxChars.coerceIn(1000, 12000))
+        return head + "\n\n" + readable.take(maxChars.coerceIn(1000, 12000))
     }
 
     private fun conversation(): JSONArray {
