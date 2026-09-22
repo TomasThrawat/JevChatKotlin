@@ -111,7 +111,7 @@ class McpClient(
                     append("\n")
                 }
             }
-            if (isBlank() && result.has("structuredContent")) append(result.opt("structuredContent").toString())
+            if (isBlank() && result.has("structuredContent")) append(result.opt("structuredContent")?.toString().orEmpty())
         }.trim()
 
         return if (result.optBoolean("isError", false)) {
