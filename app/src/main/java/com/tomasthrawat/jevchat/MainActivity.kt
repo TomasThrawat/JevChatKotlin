@@ -471,14 +471,28 @@ class MainActivity : Activity() {
     private fun completeWithTools(): String {
         val msgs = conversation()
         val toolsJson = toolDefinitions()
-        var rounds = 0
-        while (rounds < 4) {
-            val message = assistantMessage(requestVireonix(msgs, toolsJson))
+        var toolRounds = 0
+
+        while (true) {
+            val allowTools = toolRounds < 4
+            val message = assistantMessage(
+                requestVireonix(
+                    msgs,
+                    if (allowTools) toolsJson else JSONArray()
+                )
+            )
             val calls = message.optJSONArray("tool_calls")
+
             if (calls == null || calls.length() == 0) {
                 return responseText(message).takeIf { it.isNotBlank() }
                     ?: throw IllegalStateException("لم يرجع النموذج رسالة نصية.")
             }
+
+            if (!allowTools) {
+                return responseText(message).takeIf { it.isNotBlank() }
+                    ?: throw IllegalStateException("النموذج طلب أداة بعد الوصول للحد المسموح.")
+            }
+
             msgs.put(JSONObject(message.toString()))
             for (i in 0 until calls.length()) {
                 val call = calls.optJSONObject(i) ?: continue
@@ -502,9 +516,8 @@ class MainActivity : Activity() {
                         .put("content", output.take(12000))
                 )
             }
-            rounds++
+            toolRounds++
         }
-        throw IllegalStateException("تم إيقاف سلسلة الأدوات بعد 4 جولات.")
     }
 
     private fun sendMessage() {
