@@ -1,24 +1,37 @@
 # JevChatKotlin
 
-Native Kotlin Android chat app that works directly from the phone. No PC, local Ollama server, HTML, WebView, Gemini API key, or backend is required.
+Native Kotlin Android chat client for Jev.
 
-## Phone-only free mode
+## Current architecture
 
-The app sends the conversation directly to the Vireonix OpenAI-compatible chat endpoint over HTTPS.
+- Vireonix OpenAI-compatible chat endpoint.
+- No Vireonix API key or account is required.
+- Native MCP Streamable HTTP client.
+- Composio Session MCP can be connected by pasting its hosted MCP URL and headers.
+- MCP tools are discovered with tools/list.
+- Discovered MCP tools are exposed to Vireonix as OpenAI-compatible function tools.
+- Vireonix tool calls are executed with MCP tools/call and results are returned to the model for the final response.
+- Chat history is memory-only for the current process.
+- MCP URL and headers are saved only in local SharedPreferences after a successful connection.
+- Every message has a native Copy action.
+- No WebView or HTML UI is used.
 
-- Public model ID: `auto`
-- No API key
-- No account
-- No payment method
-- No personal credential is stored by the app
-- Chat history stays in app memory only
+## Composio
 
-Vireonix documents the public API as free for everyone with per-IP fair-use limits. The current documented `auto` budget is 20,000,000 input tokens/hour and 200,000 output tokens/hour per IP. It is not literally unlimited.
+Create a Composio session with mcp: true. The session exposes session.mcp.url and session.mcp.headers. Paste those values into the app's MCP settings.
+
+Docs: https://docs.composio.dev/docs/sessions-via-mcp
+
+The exact tools available depend on the Composio session configuration. A session can expose search, browser, fetch, scrape, or other connected tools.
+
+## Flow
+
+User -> Vireonix -> OpenAI-style tool call -> native MCP tools/call -> tool result -> Vireonix final answer
+
+The app allows up to four model/tool rounds for a single user message and limits each returned tool result to 12,000 characters.
 
 ## Build
 
-GitHub Actions builds the debug APK and uploads the `JevChat-debug` artifact.
+GitHub Actions builds the debug APK as JevChat-debug.
 
-## Network behavior
-
-The app requires only Android `INTERNET` permission and uses HTTPS for the Vireonix endpoint.
+The app requires INTERNET and uses HTTPS endpoints.
