@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
       - name: Checkout
         uses: actions/checkout@v6
       - name: Set up JDK 17
