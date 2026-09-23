@@ -1,37 +1,45 @@
 # JevChatKotlin
 
-Native Kotlin Android chat client for Jev.
+Native Kotlin Android client for **TypeSafe Jev / System One**.
 
 ## Current architecture
 
-- Vireonix OpenAI-compatible chat endpoint.
-- No Vireonix API key or account is required.
-- Native MCP Streamable HTTP client with negotiated legacy protocol versions (2025-03-26 through 2025-11-25).
-- Composio Session MCP can be connected by pasting its hosted MCP URL and headers.
-- MCP tools are discovered with tools/list.
-- Discovered MCP tools are exposed to Vireonix as OpenAI-compatible function tools.
-- Vireonix tool calls are executed with MCP tools/call and results are returned to the model for the final response.
-- Chat history is persisted locally in SharedPreferences without a client-side message-count or content-length cap.
-- MCP URL and headers are saved only in local SharedPreferences after a successful connection.
-- Every message has a native Copy action.
-- No WebView or HTML UI is used.
+- Direct HTTPS requests to the official TypeSafe System One API.
+- Uses the public Jev model alias `jev-latest`.
+- No Vireonix dependency.
+- No OpenAI-compatible chat-completions layer.
+- Supports the documented Jev question types: `noul`, `choice`, and `score`.
+- Displays Jev structured results, confidence, and probabilities.
+- Persists decision history locally in SharedPreferences.
+- TypeSafe API key is entered by the user and stored locally so the app can make authenticated requests.
+- No WebView or HTML UI.
 
-## Composio
+## Jev API
 
-Create a Composio session with mcp: true. The session exposes session.mcp.url and session.mcp.headers. Paste those values into the app's MCP settings.
+The app uses:
 
-Docs: https://docs.composio.dev/docs/sessions-via-mcp
+`POST https://api.typesafe.ai/v1/systemone`
 
-The exact tools available depend on the Composio session configuration. A session can expose search, browser, fetch, scrape, or other connected tools.
+with:
 
-## Flow
+`Authorization: Bearer <API_KEY>`
 
-User -> Vireonix -> OpenAI-style tool call -> native MCP tools/call -> tool result -> Vireonix final answer
+and `model: "jev-latest"`.
 
-The app does not impose client-side limits on model/tool rounds, MCP tool result size, MCP pagination, model output tokens, or network timeouts.
+Official API documentation:
+https://api.typesafe.ai/docs
+
+Official TypeSafe site:
+https://typesafe.ai/
+
+Jev is a System One model for structured decisions, not a string-generation chat model. Its output is typed and includes calibrated probabilities/confidence for supported question types.
+
+## Important
+
+This app is intentionally **Jev-only**. It does not route requests through Vireonix and it does not pretend Jev is a chat-completions model.
 
 ## Build
 
-GitHub Actions builds the debug APK as JevChat-debug.
+GitHub Actions builds the debug APK as `JevChat-debug`.
 
-The app requires INTERNET and uses HTTPS endpoints.
+The app requires INTERNET and uses HTTPS.
