@@ -19,6 +19,7 @@ class McpClient(
 ) {
     private val nextId = AtomicInteger()
     private var sessionId: String? = null
+    private var protocolVersion: String? = null
     private var connected = false
 
     fun connect() {
@@ -40,8 +41,13 @@ class McpClient(
         if (response.code !in 200..299) throw IOException("MCP initialize HTTP " + response.code)
         val envelope = jsonObject(response.body) ?: throw IOException("MCP initialize returned no JSON.")
         checkNoError(envelope)
-        if (!envelope.has("result")) throw IOException("MCP initialize returned no result.")
-
+        val result = envelope.optJSONObject("result")
+            ?: throw IOException("MCP initialize returned no result.")
+        val negotiatedVersion = result.optString("protocolVersion").trim()
+        if (negotiatedVersion !in setOf("2025-03-26", "2025-06-18", "2025-11-25")) {
+            throw IOException("Unsupported MCP protocol version: " + negotiatedVersion.ifBlank { "missing" })
+        }
+        protocolVersion = negotiatedVersion
         sessionId = response.header("Mcp-Session-Id") ?: response.header("mcp-session-id")
         connected = true
 
@@ -121,6 +127,7 @@ class McpClient(
 
     fun disconnect() {
         sessionId = null
+        protocolVersion = null
         connected = false
     }
 
@@ -141,6 +148,9 @@ class McpClient(
             setRequestProperty("Accept", "application/json, text/event-stream")
             customHeaders.forEach {
                 if (it.key.isNotBlank() && it.value.isNotBlank()) setRequestProperty(it.key, it.value)
+            }
+            if (!protocolVersion.isNullOrBlank()) {
+                setRequestProperty("MCP-Protocol-Version", protocolVersion)
             }
             if (!currentSession.isNullOrBlank() &&
                 customHeaders.keys.none { it.equals("Mcp-Session-Id", ignoreCase = true) }
