@@ -725,7 +725,7 @@ class MainActivity : Activity() {
     }
 
     private fun assistantMessage(response: JSONObject): JSONObject {
-        val candidates = listOf(
+        val candidates = listOfNotNull(
             response,
             response.optJSONObject("data"),
             response.optJSONObject("response"),
