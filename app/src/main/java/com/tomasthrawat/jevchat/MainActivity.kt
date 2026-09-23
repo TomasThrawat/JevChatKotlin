@@ -642,7 +642,36 @@ class MainActivity : Activity() {
                 val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
 
                 if (code in 200..299) {
-                    return JSONObject(raw)
+                    val json = JSONObject(raw)
+                    val apiError = json.optJSONObject("error")
+                    if (apiError != null) {
+                        val errorCode = apiError.optInt("code", 0)
+                        val errorMessage = apiError.optString("message").ifBlank {
+                            "OpenRouter returned an API error."
+                        }
+                        val errorType = apiError.optString("type")
+                        val overloaded =
+                            errorType.equals("provider_overloaded", ignoreCase = true) ||
+                                errorMessage.contains("overloaded", ignoreCase = true)
+                        if (overloaded || errorCode == 429 || errorCode in 500..599) {
+                            lastError = IllegalStateException(errorMessage)
+                            if (attempt < 2) {
+                                runOnUiThread {
+                                    status.text = "مزود OpenRouter مشغول. إعادة المحاولة..."
+                                }
+                                Thread.sleep(1500L shl attempt)
+                                continue
+                            }
+                        }
+                        throw IllegalStateException(
+                            if (errorType.isNotBlank()) {
+                                "OpenRouter API: $errorMessage ($errorType)"
+                            } else {
+                                "OpenRouter API: $errorMessage"
+                            }
+                        )
+                    }
+                    return json
                 }
 
                 val errorObject =
