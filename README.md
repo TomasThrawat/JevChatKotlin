@@ -28,7 +28,7 @@ The exact tools available depend on the Composio session configuration. A sessio
 
 User -> Vireonix -> OpenAI-style tool call -> native MCP tools/call -> tool result -> Vireonix final answer
 
-The app does not impose client-side limits on model/tool rounds, tool result size, MCP pagination, local tool response size, model output tokens, or network timeouts.
+The app does not impose client-side limits on model/tool rounds, MCP tool result size, MCP pagination, model output tokens, or network timeouts.
 
 ## Build
 
