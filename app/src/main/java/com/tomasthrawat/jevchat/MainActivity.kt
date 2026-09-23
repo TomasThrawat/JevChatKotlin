@@ -379,7 +379,7 @@ class MainActivity : Activity() {
 
     private fun toolDefinitions(): JSONArray {
         val result = JSONArray()
-        mcpTools.sortedBy { it.name }.take(64).forEach { tool ->
+        mcpTools.sortedBy { it.name }.forEach { tool ->
             result.put(
                 JSONObject()
                     .put("type", "function")
@@ -398,7 +398,7 @@ class MainActivity : Activity() {
     private fun conversation(): JSONArray {
         val result = JSONArray()
         result.put(JSONObject().put("role", "system").put("content", systemPrompt))
-        history.takeLast(23).forEach {
+        history.forEach {
             result.put(JSONObject().put("role", it.role).put("content", it.content))
         }
         return result
@@ -408,9 +408,8 @@ class MainActivity : Activity() {
         val body = JSONObject()
             .put("model", "auto")
             .put("messages", messagesJson)
-            .put("temperature", 0.4)
-            .put("max_tokens", 1200)
-        if (toolsJson.length() > 0) {
+            .put("temperature", 0.20)
+                    if (toolsJson.length() > 0) {
             body.put("tools", toolsJson)
             body.put("tool_choice", "auto")
         }
@@ -422,8 +421,8 @@ class MainActivity : Activity() {
             try {
                 c = URL("https://vireonix.ai/v1/chat/completions").openConnection() as HttpURLConnection
                 c.requestMethod = "POST"
-                c.connectTimeout = 15000
-                c.readTimeout = 90000
+                c.connectTimeout = 0
+                c.readTimeout = 0
                 c.doOutput = true
                 c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 c.setRequestProperty("Accept", "application/json")
@@ -523,8 +522,7 @@ class MainActivity : Activity() {
     private fun completeWithTools(): String {
         val msgs = conversation()
         val toolsJson = toolDefinitions()
-        var rounds = 0
-        while (rounds < 4) {
+        while (true) {
             val message = assistantMessage(requestVireonix(msgs, toolsJson))
             val calls = message.optJSONArray("tool_calls")
             if (calls == null || calls.length() == 0) {
@@ -551,10 +549,9 @@ class MainActivity : Activity() {
                     JSONObject()
                         .put("role", "tool")
                         .put("tool_call_id", callId)
-                        .put("content", output.take(12000))
+                        .put("content", output)
                 )
             }
-            rounds++
         }
         throw IllegalStateException("تم إيقاف سلسلة الأدوات بعد 4 جولات.")
     }
