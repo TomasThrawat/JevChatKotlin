@@ -40,9 +40,9 @@ class MainActivity : Activity() {
     private lateinit var send: TextView
     private lateinit var clear: TextView
 
-    private val modelId = "qwen/qwen3-235b-a22b:free"
+    private val modelId = "nvidia/nemotron-3-ultra-550b-a55b:free"
     private val systemPrompt =
-        "You are a powerful general-purpose AI chat assistant powered by Qwen3-235B-A22B. " +
+        "You are a powerful general-purpose AI chat assistant powered by NVIDIA Nemotron 3 Ultra. " +
             "Be direct, accurate, and useful. " +
             "Use available MCP tools for current information or web research when they are relevant. " +
             "Never claim a tool was used unless the tool call actually succeeded. " +
@@ -102,7 +102,7 @@ class MainActivity : Activity() {
             setTypeface(null, Typeface.BOLD)
         })
         brand.addView(TextView(this).apply {
-            text = "Qwen3 235B • مجاني • OpenRouter"
+            text = "Nemotron 3 Ultra • مجاني • OpenRouter"
             textSize = 12.5f
             setTextColor(Color.rgb(145, 153, 170))
         })
@@ -138,7 +138,7 @@ class MainActivity : Activity() {
             setPadding(0, dp(12), 0, dp(4))
         }
         chips.addView(TextView(this).apply {
-            text = "Qwen3 235B • مجاني"
+            text = "Nemotron 3 Ultra • مجاني"
             textSize = 11.5f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(185, 194, 212))
@@ -220,9 +220,9 @@ class MainActivity : Activity() {
     private fun addWelcome() {
         val configured = prefs.getString("openrouter_api_key", "").orEmpty().isNotBlank()
         val message = if (configured) {
-            "جاهز. النموذج الحالي: Qwen3-235B-A22B المجاني."
+            "جاهز. النموذج الحالي: NVIDIA Nemotron 3 Ultra المجاني."
         } else {
-            "جاهز. أدخل مفتاح OpenRouter من زر API. النموذج الحالي: Qwen3-235B-A22B المجاني."
+            "جاهز. أدخل مفتاح OpenRouter من زر API. النموذج الحالي: NVIDIA Nemotron 3 Ultra المجاني."
         }
         addMessage(
             "Jev",
@@ -338,7 +338,7 @@ class MainActivity : Activity() {
 
         val info = TextView(this).apply {
             text =
-                "النموذج: Qwen3-235B-A22B:free\n" +
+                "النموذج: NVIDIA Nemotron 3 Ultra:free\n" +
                     "الخطة المجانية لا تتطلب دفعًا، لكنها محدودة بمعدل استخدام. " +
                     "لا تضع مفتاحك داخل GitHub."
             textSize = 12.5f
@@ -378,7 +378,7 @@ class MainActivity : Activity() {
                     return@setOnClickListener
                 }
                 prefs.edit().putString("openrouter_api_key", key).apply()
-                status.text = "جاهز • Qwen3 235B"
+                status.text = "جاهز • Nemotron 3 Ultra"
                 dialog.dismiss()
             }
         }
@@ -836,7 +836,7 @@ class MainActivity : Activity() {
         clear.isEnabled = false
         status.text =
             if (mcpTools.isEmpty()) {
-                "Qwen3 يفكر..."
+                "Nemotron 3 Ultra يفكر..."
             } else {
                 "Qwen3 يفكر ويجهز الأدوات..."
             }

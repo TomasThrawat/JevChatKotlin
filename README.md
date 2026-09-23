@@ -4,8 +4,8 @@ Native Kotlin Android Chat AI client using a free OpenRouter model endpoint.
 
 ## Model
 
-- Model ID: `qwen/qwen3-235b-a22b:free`
-- Qwen3-235B-A22B is a 235B-parameter MoE model with 22B active parameters per forward pass.
+- Model ID: `nvidia/nemotron-3-ultra-550b-a55b:free`
+- NVIDIA Nemotron 3 Ultra is a 235B-parameter MoE model with 22B active parameters per forward pass.
 - The model supports thinking/reasoning, multilingual chat, and tool calling.
 - The free endpoint is rate-limited.
 
