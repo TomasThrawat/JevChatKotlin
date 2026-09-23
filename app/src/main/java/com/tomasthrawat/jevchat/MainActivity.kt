@@ -36,6 +36,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var toolsChip: TextView
     private lateinit var send: TextView
+    private lateinit var clear: TextView
 
     private val systemPrompt =
         "You are Jev, the conversational assistant associated with Jev Ultrafast. " +
@@ -47,7 +48,38 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
+        restoreHistory()
         reconnectSavedMcp()
+    }
+
+    private fun saveHistory() {
+        val serialized = JSONArray()
+        history.forEach { message ->
+            serialized.put(
+                JSONObject()
+                    .put("role", message.role)
+                    .put("content", message.content)
+            )
+        }
+        prefs.edit().putString("chat_history", serialized.toString()).apply()
+    }
+
+    private fun restoreHistory() {
+        val raw = prefs.getString("chat_history", null).orEmpty()
+        if (raw.isBlank()) return
+        val restored = runCatching { JSONArray(raw) }.getOrNull() ?: return
+        history.clear()
+        messages.removeAllViews()
+        for (i in 0 until restored.length()) {
+            val item = restored.optJSONObject(i) ?: continue
+            val role = item.optString("role").trim()
+            val content = item.optString("content")
+            if (role != "user" && role != "assistant") continue
+            if (content.isBlank()) continue
+            history.add(ChatMessage(role, content))
+            addMessage(if (role == "user") "أنت" else "Jev", content)
+        }
+        if (history.isEmpty()) addWelcome()
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -98,11 +130,14 @@ class MainActivity : Activity() {
         })
         header.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
         header.addView(action("MCP") { showMcpSettings() }, LinearLayout.LayoutParams(dp(62), dp(42)))
-        header.addView(action("مسح") {
+        clear = action("مسح") {
+            if (!send.isEnabled) return@action
             history.clear()
             messages.removeAllViews()
+            saveHistory()
             addWelcome()
-        }, LinearLayout.LayoutParams(dp(62), dp(42)).apply { marginStart = dp(8) })
+        }
+        header.addView(clear, LinearLayout.LayoutParams(dp(62), dp(42)).apply { marginStart = dp(8) })
         root.addView(header)
 
         val chips = LinearLayout(this).apply {
@@ -529,22 +564,46 @@ class MainActivity : Activity() {
                 return responseText(message).takeIf { it.isNotBlank() }
                     ?: throw IllegalStateException("لم يرجع النموذج رسالة نصية.")
             }
-            msgs.put(JSONObject(message.toString()))
+
+            val assistantToolMessage = JSONObject(message.toString())
+            val normalizedCalls = JSONArray()
+            val pendingToolResults = mutableListOf<Pair<String, String>>()
+
             for (i in 0 until calls.length()) {
-                val call = calls.optJSONObject(i) ?: continue
-                val callId = call.optString("id").ifBlank { "call_" + i }
-                val fn = call.optJSONObject("function") ?: continue
+                val call = calls.optJSONObject(i)
+                    ?: throw IllegalStateException("النموذج أعاد tool call غير صالح.")
+                val callCopy = JSONObject(call.toString())
+                val callId = callCopy.optString("id").trim().ifBlank {
+                    "jev_tool_call_" + System.nanoTime() + "_" + i
+                }
+                val fn = callCopy.optJSONObject("function")
+                    ?: throw IllegalStateException("النموذج أعاد tool call بدون function.")
                 val name = fn.optString("name").trim()
-                val args = runCatching { JSONObject(fn.optString("arguments", "{}")) }
-                    .getOrDefault(JSONObject())
-                runOnUiThread { status.text = "يستخدم MCP: " + name }
-                val output = if (mcpTools.none { it.name == name }) {
+                if (name.isBlank()) {
+                    throw IllegalStateException("النموذج أعاد tool call بدون اسم أداة.")
+                }
+
+                callCopy.put("id", callId)
+                normalizedCalls.put(callCopy)
+
+                val argumentsText = fn.optString("arguments", "{}").ifBlank { "{}" }
+                val parsedArgs = runCatching { JSONObject(argumentsText) }.getOrNull()
+                val output = if (parsedArgs == null) {
+                    "MCP tool arguments are not valid JSON for $name."
+                } else if (mcpTools.none { it.name == name }) {
                     "MCP tool not found: " + name
                 } else {
+                    runOnUiThread { status.text = "يستخدم MCP: " + name }
                     runCatching {
-                        mcpClient?.callTool(name, args) ?: "MCP is not connected."
+                        mcpClient?.callTool(name, parsedArgs) ?: "MCP is not connected."
                     }.getOrElse { "MCP tool error: " + (it.message ?: "unknown error") }
                 }
+                pendingToolResults.add(callId to output)
+            }
+
+            assistantToolMessage.put("tool_calls", normalizedCalls)
+            msgs.put(assistantToolMessage)
+            pendingToolResults.forEach { (callId, output) ->
                 msgs.put(
                     JSONObject()
                         .put("role", "tool")
@@ -553,33 +612,38 @@ class MainActivity : Activity() {
                 )
             }
         }
-        throw IllegalStateException("تم إيقاف سلسلة الأدوات بعد 4 جولات.")
     }
 
     private fun sendMessage() {
         val text = input.text.toString().trim()
         if (text.isEmpty() || !send.isEnabled) return
         history.add(ChatMessage("user", text))
+        saveHistory()
         addMessage("أنت", text)
         input.setText("")
         send.isEnabled = false
+        clear.isEnabled = false
         status.text = if (mcpTools.isEmpty()) "Jev يفكر..." else "Jev يفكر ويجهز الأدوات..."
         executor.execute {
             try {
                 val reply = completeWithTools()
                 history.add(ChatMessage("assistant", reply))
+                saveHistory()
                 runOnUiThread {
                     addMessage("Jev", reply)
                     status.text = if (mcpTools.isEmpty()) "متصل بـ Vireonix" else "Vireonix + MCP"
                     send.isEnabled = true
+                    clear.isEnabled = true
                     input.requestFocus()
                 }
             } catch (e: Exception) {
                 if (history.lastOrNull()?.role == "user") history.removeAt(history.lastIndex)
+                saveHistory()
                 runOnUiThread {
                     addMessage("Jev", e.message ?: "حدث خطأ غير معروف.")
                     status.text = "تعذر إكمال الطلب"
                     send.isEnabled = true
+                    clear.isEnabled = true
                 }
             }
         }
