@@ -6,12 +6,12 @@ Native Kotlin Android chat client for Jev.
 
 - Vireonix OpenAI-compatible chat endpoint.
 - No Vireonix API key or account is required.
-- Native MCP Streamable HTTP client.
+- Native MCP Streamable HTTP client with negotiated legacy protocol versions (2025-03-26 through 2025-11-25).
 - Composio Session MCP can be connected by pasting its hosted MCP URL and headers.
 - MCP tools are discovered with tools/list.
 - Discovered MCP tools are exposed to Vireonix as OpenAI-compatible function tools.
 - Vireonix tool calls are executed with MCP tools/call and results are returned to the model for the final response.
-- Chat history is persisted locally in SharedPreferences.
+- Chat history is persisted locally in SharedPreferences without a client-side message-count or content-length cap.
 - MCP URL and headers are saved only in local SharedPreferences after a successful connection.
 - Every message has a native Copy action.
 - No WebView or HTML UI is used.
